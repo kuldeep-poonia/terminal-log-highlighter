@@ -2,7 +2,7 @@
 set -e
 
 # --- Configuration ---
-GITHUB_REPO="kuldeep-poonia/sentinel"          # Replace with your GitHub username/repo
+GITHUB_REPO="kuldeep-poonia/terminal-log-highlighter"          # Replace with your GitHub username/repo
 BINARY_NAME="sentinel"
 INSTALL_DIR="/usr/local/bin"
 
