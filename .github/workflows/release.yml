@@ -1,19 +1,18 @@
 name: Build and Release
 
-# Trigger on push of a version tag (e.g., v1.0.0, v2.3.1)
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'   # semantic versioning pattern
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
 
 env:
   CARGO_TERM_COLOR: always
-  BINARY_NAME: sentinel #from sentienel-poonia to sentienel
+  BINARY_NAME: sentinel   
 
 jobs:
   build:
     name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}     #nothing ------ trying to trigger workflow
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -44,9 +43,8 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
-          components: rustfmt, clippy
 
-      - name: Cache cargo registry
+      - name: Cache cargo
         uses: actions/cache@v3
         with:
           path: |
@@ -54,22 +52,10 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
 
-      - name: Inject version from tag
-        shell: bash
+      - name: Build binary
         run: |
-          # Extract version from git tag (remove leading 'v')
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          # Set environment variable for compile-time embedding
-          echo "SENTINEL_VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Build release binary
-        run: |
-          cargo build --release --target ${{ matrix.target }} \
-            --config "env.SENTINEL_VERSION=\"${SENTINEL_VERSION}\""
+          cargo build --release --target ${{ matrix.target }}
 
       - name: Prepare asset
         shell: bash
@@ -79,9 +65,13 @@ jobs:
           else
             BIN="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
           fi
+
+          echo "Looking for binary at $BIN"
+          ls -l "$BIN"   # debug: will fail if missing
+
           cp "$BIN" "${{ matrix.asset_name }}"
 
-      - name: Upload artifact to release
+      - name: Upload to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -90,26 +80,25 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
 
-  # Optional: create a checksum file for all assets
   checksums:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all assets
-        uses: actions/download-artifact@v3
+      - name: Download assets
+        uses: actions/download-artifact@v3   # all uploaded artifacts from previous jobs
         with:
           path: assets
 
       - name: Generate checksums
         run: |
-          cd assets || exit 1
-          find . -type f -exec sha256sum {} \; > sha256sums.txt
+          cd assets
+          find . -type f -exec sha256sum {} \; > ../sha256sums.txt
 
       - name: Upload checksums
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: assets/sha256sums.txt
+          file: sha256sums.txt
           asset_name: sha256sums.txt
           tag: ${{ github.ref }}
           overwrite: true
