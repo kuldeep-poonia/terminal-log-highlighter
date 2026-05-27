@@ -1,0 +1,19 @@
+[package]
+name = "sentinel"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+memchr = "2"
+aho-corasick = "1"
+regex = { version = "1", optional = true }
+
+[features]
+default = []
+regex = ["dep:regex"]
+
+[profile.release]
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true
