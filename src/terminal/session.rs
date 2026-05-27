@@ -1,29 +1,20 @@
-use portable_pty::{self, CommandBuilder, NativePtySystem, PtySize, PtySystem};
+use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::{self, BufRead, BufReader, Read};
-use std::process::Command;
-use std::sync::Arc;
-use std::thread;
 
-/// Either a spawned PTY subprocess or a simple stdin reader.
 pub enum Session {
-    /// Reads from standard input (original behaviour).
     Stdin(BufReader<io::Stdin>),
-    /// Spawned a command under a PTY; reads from the PTY master.
     Pty {
-        // Keep the child process alive for the session duration.
-        child: portable_pty::Child,
-        // The master side of the PTY (wrapped for buffered reading).
+        // Store as Box<dyn Child + Send> (the trait object without Sync).
+        child: Box<dyn portable_pty::Child + Send>,
         reader: BufReader<Box<dyn Read + Send>>,
     },
 }
 
 impl Session {
-    /// Create a session that reads from stdin.
     pub fn stdin() -> Self {
         Session::Stdin(BufReader::new(io::stdin()))
     }
 
-    /// Spawn a command in a PTY, returning a session that reads its output.
     pub fn spawn(command: &str, args: &[String]) -> io::Result<Self> {
         let pty_system = NativePtySystem::default();
         let pair = pty_system
@@ -37,17 +28,23 @@ impl Session {
             .spawn_command(cmd)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        // Close slave in this process; we only need the master.
-        drop(pair.slave);
+        // `child` is Box<dyn Child + Send + Sync>.  We coerce it to
+        // Box<dyn Child + Send> (dropping Sync) so it satisfies the
+        // trait implementation required by portable‑pty.
+        let child: Box<dyn portable_pty::Child + Send> = Box::new(child);
 
-        // Wrap the master in a buffered reader.
-        let reader: Box<dyn Read + Send> = Box::new(pair.master);
+        let reader: Box<dyn Read + Send> = pair
+            .master
+            .try_clone_reader()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let reader = BufReader::new(reader);
+
+        drop(pair.master);
+        drop(pair.slave);
 
         Ok(Session::Pty { child, reader })
     }
 
-    /// Obtain a mutable reference to the buffered reader.
     pub fn reader(&mut self) -> &mut dyn BufRead {
         match self {
             Session::Stdin(ref mut r) => r,
