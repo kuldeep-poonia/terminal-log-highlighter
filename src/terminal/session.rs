@@ -4,8 +4,7 @@ use std::io::{self, BufRead, BufReader, Read};
 pub enum Session {
     Stdin(BufReader<io::Stdin>),
     Pty {
-        // Store as Box<dyn Child + Send> (the trait object without Sync).
-        child: Box<dyn portable_pty::Child + Send>,
+        child: Box<dyn portable_pty::Child + Send + Sync>,   // exact return type
         reader: BufReader<Box<dyn Read + Send>>,
     },
 }
@@ -28,11 +27,6 @@ impl Session {
             .spawn_command(cmd)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        // `child` is Box<dyn Child + Send + Sync>.  We coerce it to
-        // Box<dyn Child + Send> (dropping Sync) so it satisfies the
-        // trait implementation required by portable‑pty.
-        let child: Box<dyn portable_pty::Child + Send> = Box::new(child);
-
         let reader: Box<dyn Read + Send> = pair
             .master
             .try_clone_reader()
@@ -42,7 +36,7 @@ impl Session {
         drop(pair.master);
         drop(pair.slave);
 
-        Ok(Session::Pty { child, reader })
+        Ok(Session::Pty { child, reader })   // child is already Box<dyn Child + Send + Sync>
     }
 
     pub fn reader(&mut self) -> &mut dyn BufRead {

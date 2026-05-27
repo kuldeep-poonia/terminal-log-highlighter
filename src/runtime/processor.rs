@@ -12,7 +12,6 @@ pub struct Processor<W: Write> {
 }
 
 impl<W: Write> Processor<W> {
-    /// Create a new processor using the provided pattern database.
     pub fn new(renderer: Renderer<W>, db: PatternDatabase) -> Self {
         let matcher = matcher::Matcher::from_db(&db);
         Self {
@@ -23,23 +22,22 @@ impl<W: Write> Processor<W> {
         }
     }
 
-    #[allow(unused_variables)]
     pub fn process_chunk(&mut self, chunk: &[u8]) -> io::Result<()> {
         let renderer = &mut self.renderer;
         let matcher = &self.matcher;
-        let db = &self.db;
+        let _db = &self.db;                     // underscore prefix avoids warning
 
         self.assembler.push(chunk, |event| -> io::Result<()> {
             match event {
                 LineEvent::Line(line) => {
                     let maybe_match = matcher.check(line);
-                    renderer.write_line(line, maybe_match, db)?;
+                    renderer.write_line(line, maybe_match, _db)?;   // use _db here
                 }
                 LineEvent::Overflow(data) => {
                     renderer.write_raw(data)?;
                 }
                 LineEvent::Partial(_data) => {
-                    // Handled during flush.
+                    // handled in flush
                 }
             }
             Ok(())
@@ -50,11 +48,11 @@ impl<W: Write> Processor<W> {
     pub fn flush(&mut self) -> io::Result<()> {
         let renderer = &mut self.renderer;
         let matcher = &self.matcher;
-        let db = &self.db;
+        let _db = &self.db;                     // same here
 
         self.assembler.flush(|event| -> io::Result<()> {
             if let LineEvent::Partial(data) = event {
-                let _ = matcher.check(data);
+                let _ = matcher.check(data);   // result unused
                 renderer.write_raw(data)?;
             }
             Ok(())
