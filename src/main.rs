@@ -2,6 +2,7 @@ mod runtime;
 mod matcher;
 mod renderer;
 mod config;
+mod parser;
 
 fn main() {
     let config = config::load_config();

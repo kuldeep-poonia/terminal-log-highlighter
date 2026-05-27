@@ -18,3 +18,19 @@ lto = true
 panic = "abort"
 codegen-units = 1
 strip = true
+
+# Benchmarking
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "throughput"
+harness = false
+
+[[bench]]
+name = "latency"
+harness = false
+
+[[bench]]
+name = "allocations"
+harness = false

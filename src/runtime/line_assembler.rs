@@ -175,7 +175,7 @@ impl LineAssembler {
 
     /// Feed a chunk of data, calling `cb` for each completed line.
     /// The callback returns `io::Result<()>` – errors are propagated immediately.
-    #[inline]
+    
     #[inline]
 pub fn push<F>(&mut self, data: &[u8], mut cb: F) -> io::Result<()>
 where

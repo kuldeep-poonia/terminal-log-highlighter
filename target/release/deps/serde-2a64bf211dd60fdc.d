@@ -1,0 +1,14 @@
+/home/kuldeeppoonia/projects/Rune/target/release/deps/serde-2a64bf211dd60fdc.d: /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/kuldeeppoonia/projects/Rune/target/release/build/serde-74d7d2dfff7e5833/out/private.rs
+
+/home/kuldeeppoonia/projects/Rune/target/release/deps/libserde-2a64bf211dd60fdc.rlib: /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/kuldeeppoonia/projects/Rune/target/release/build/serde-74d7d2dfff7e5833/out/private.rs
+
+/home/kuldeeppoonia/projects/Rune/target/release/deps/libserde-2a64bf211dd60fdc.rmeta: /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/kuldeeppoonia/projects/Rune/target/release/build/serde-74d7d2dfff7e5833/out/private.rs
+
+/home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/kuldeeppoonia/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/kuldeeppoonia/projects/Rune/target/release/build/serde-74d7d2dfff7e5833/out/private.rs:
+
+# env-dep:OUT_DIR=/home/kuldeeppoonia/projects/Rune/target/release/build/serde-74d7d2dfff7e5833/out

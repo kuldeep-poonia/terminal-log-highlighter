@@ -6,31 +6,32 @@ use super::defaults;
 use super::schema::{Config, Filter};
 use crate::matcher::classifier::Severity;
 
-/// Load configuration from the file specified in `SENTINEL_CONFIG`, or fall back
-/// to built‑in defaults.  Silent failure preserves the invisible runtime promise.
 pub fn load_config() -> Config {
     if let Ok(path) = env::var("SENTINEL_CONFIG") {
         if let Ok(content) = fs::read_to_string(&path) {
             if let Ok(config) = parse_config(&content) {
                 return config;
             }
-            // If parsing fails, we fall back silently – no output.
         }
     }
     defaults::default_config()
 }
 
-/// Parse a TOML string into a `Config`.
 fn parse_config(toml_str: &str) -> Result<Config, String> {
-    let value = toml::from_str(toml_str).map_err(|e| e.to_string())?;
-    let root = value.as_table().ok_or("root must be a table")?;
+    // Give the type explicitly – the TOML root is a table.
+    let value: toml::Table = toml::from_str(toml_str).map_err(|e| e.to_string())?;
 
-    let filters_table = root.get("filters").ok_or("missing [filters] section")?;
-    let filters = filters_table.as_table().ok_or("[filters] must be a table")?;
+    let filters_table = value
+        .get("filters")
+        .ok_or("missing [filters] section")?
+        .as_table()
+        .ok_or("[filters] must be a table")?;
 
     let mut filter_list = Vec::new();
-    for (_filter_name, filter_val) in filters {
-        let filter = filter_val.as_table().ok_or("each filter must be a table")?;
+    for (_filter_name, filter_val) in filters_table {
+        let filter = filter_val
+            .as_table()
+            .ok_or("each filter must be a table")?;
 
         let pattern = filter
             .get("pattern")

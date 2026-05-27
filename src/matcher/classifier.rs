@@ -49,15 +49,8 @@ impl PatternDatabase {
         Self { entries }
     }
 
-    /// Provide a built‑in set of danger patterns.
-    pub fn defaults() -> Self {
-        let defs = vec![
-            PatternDef { pattern: "error".into(), severity: Severity::Error },
-            PatternDef { pattern: "warn".into(), severity: Severity::Warn },
-            PatternDef { pattern: "timeout".into(), severity: Severity::Critical },
-        ];
-        Self::from_defs(&defs)
-    }
+    
+    
 
     /// Number of patterns stored.
     #[inline]

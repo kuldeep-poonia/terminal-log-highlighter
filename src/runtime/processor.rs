@@ -23,6 +23,7 @@ impl<W: Write> Processor<W> {
         }
     }
 
+    #[allow(unused_variables)]
     pub fn process_chunk(&mut self, chunk: &[u8]) -> io::Result<()> {
         let renderer = &mut self.renderer;
         let matcher = &self.matcher;
