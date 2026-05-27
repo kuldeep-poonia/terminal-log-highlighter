@@ -7,7 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  BINARY_NAME: sentinel   
+  BINARY_NAME: sentinel
 
 jobs:
   build:
@@ -53,7 +53,7 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      # ----- Cross-compilation setup for Linux ARM64 -----
+      # Cross-compilation toolchain for ARM64 Linux
       - name: Install ARM64 cross-compilation tools (Linux)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -69,7 +69,6 @@ jobs:
           linker = "aarch64-linux-gnu-gcc"
           ar = "aarch64-linux-gnu-ar"
           EOF
-      # ----------------------------------------------------
 
       - name: Build binary
         run: |
@@ -89,6 +88,15 @@ jobs:
 
           cp "$BIN" "${{ matrix.asset_name }}"
 
+      # Upload binary as a workflow artifact so the checksums job can use it
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+          retention-days: 1
+
+      # Upload directly to the GitHub Release
       - name: Upload to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -102,7 +110,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all release assets
+      # Download all workflow artifacts from the previous build jobs
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: assets
@@ -110,9 +119,10 @@ jobs:
       - name: Generate checksums
         run: |
           cd assets
+          # All artifacts are placed in subdirectories; we flatten them for checksums
           find . -type f -exec sha256sum {} \; > ../sha256sums.txt
 
-      - name: Upload checksums
+      - name: Upload checksums to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
