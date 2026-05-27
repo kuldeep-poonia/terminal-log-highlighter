@@ -53,6 +53,24 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      # ----- Cross-compilation setup for Linux ARM64 -----
+      - name: Install ARM64 cross-compilation tools (Linux)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Configure Cargo for ARM64 linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          cat >> .cargo/config.toml <<EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          ar = "aarch64-linux-gnu-ar"
+          EOF
+      # ----------------------------------------------------
+
       - name: Build binary
         run: |
           cargo build --release --target ${{ matrix.target }}
@@ -66,8 +84,8 @@ jobs:
             BIN="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
           fi
 
-          echo "Looking for binary at $BIN"
-          ls -l "$BIN"   # debug: will fail if missing
+          echo "Checking binary at: $BIN"
+          ls -l "$BIN" || exit 1
 
           cp "$BIN" "${{ matrix.asset_name }}"
 
@@ -84,8 +102,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download assets
-        uses: actions/download-artifact@v3   # all uploaded artifacts from previous jobs
+      - name: Download all release assets
+        uses: actions/download-artifact@v3
         with:
           path: assets
 
