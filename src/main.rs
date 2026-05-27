@@ -1,11 +1,11 @@
 mod runtime;
 mod matcher;
 mod renderer;
+mod config;
 
 fn main() {
-    // Invisible runtime: no output on failure.
-    // In a later phase, SENTINEL_DEBUG will enable hidden diagnostics.
-    if let Err(e) = runtime::run() {
+    let config = config::load_config();
+    if let Err(e) = runtime::run(config) {
         std::process::exit(e.raw_os_error().unwrap_or(1));
     }
 }

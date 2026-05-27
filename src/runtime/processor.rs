@@ -12,8 +12,8 @@ pub struct Processor<W: Write> {
 }
 
 impl<W: Write> Processor<W> {
-    pub fn with_defaults(renderer: Renderer<W>) -> Self {
-        let db = PatternDatabase::defaults();
+    /// Create a new processor using the provided pattern database.
+    pub fn new(renderer: Renderer<W>, db: PatternDatabase) -> Self {
         let matcher = matcher::Matcher::from_db(&db);
         Self {
             renderer,
@@ -23,11 +23,6 @@ impl<W: Write> Processor<W> {
         }
     }
 
-    /// Process an incoming byte chunk.
-    ///
-    /// Raw bytes are fed to the line assembler.  Completed lines are then
-    /// handed to the renderer, which may add ANSI highlighting based on
-    /// match results.  Overflow and partial data are written raw.
     pub fn process_chunk(&mut self, chunk: &[u8]) -> io::Result<()> {
         let renderer = &mut self.renderer;
         let matcher = &self.matcher;
@@ -40,17 +35,14 @@ impl<W: Write> Processor<W> {
                     renderer.write_line(line, maybe_match, db)?;
                 }
                 LineEvent::Overflow(data) => {
-                    // Write raw – no newline, no highlighting.
                     renderer.write_raw(data)?;
                 }
                 LineEvent::Partial(_data) => {
-                    // Only produced during explicit flush; handled there.
+                    // Handled during flush.
                 }
             }
             Ok(())
-        })?; // propagates any I/O error from callback
-
-        // No per‑chunk flush – renderer writes immediately.
+        })?;
         Ok(())
     }
 
@@ -59,17 +51,14 @@ impl<W: Write> Processor<W> {
         let matcher = &self.matcher;
         let db = &self.db;
 
-        // Flush any remaining partial data from the assembler.
         self.assembler.flush(|event| -> io::Result<()> {
             if let LineEvent::Partial(data) = event {
-                // Optional: match on the final partial line.
                 let _ = matcher.check(data);
                 renderer.write_raw(data)?;
             }
             Ok(())
         })?;
 
-        // Flush the underlying writer.
         renderer.flush()
     }
 }
