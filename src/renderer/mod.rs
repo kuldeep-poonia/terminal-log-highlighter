@@ -3,70 +3,46 @@ pub mod ansi;
 use crate::matcher::classifier::{MatchResult, PatternDatabase};
 use crate::parser::Tokenizer;
 use crate::parser::tokenizer::TokenKind;
-use std::io::{self, BufWriter, Write};
+use std::io::{self, Write, LineWriter};
 
 pub struct Renderer<W: Write> {
-    writer: BufWriter<W>,
+    writer: LineWriter<W>,
 }
 
 impl<W: Write> Renderer<W> {
     pub fn new(writer: W) -> Self {
         Self {
-            writer: BufWriter::with_capacity(8192, writer),
+            writer: LineWriter::with_capacity(8192, writer),
         }
     }
 
-    /// Write a complete logical line, with ANSI‑safe highlighting.
+    /// Write a complete logical line.
     ///
-    /// If a match is found, the matched portion is highlighted **only within
-    /// plain‑text segments** of the line. Existing ANSI escape sequences are
-    /// preserved untouched.
+    /// * If a match is found, the **entire line** is wrapped in the colour
+    ///   of the matched severity, and then reset at the end.
+    /// * If the line contains its own ANSI escapes, no highlighting is
+    ///   applied (to avoid corruption).
     pub fn write_line(
         &mut self,
         line: &[u8],
         match_result: Option<MatchResult>,
         db: &PatternDatabase,
     ) -> io::Result<()> {
-        let tokens = Tokenizer::new(line);
-
         if let Some(m) = match_result {
-            let severity = db.severity(m.pattern_id);
-            let pattern_len = db.pattern(m.pattern_id).len();
-            let match_start = m.offset;
-            let match_end = match_start + pattern_len;
-
-            for token in tokens {
-                match token.kind {
-                    TokenKind::Text => {
-                        // Only this segment may contain the match.
-                        let seg = &line[token.start..token.end];
-                        if match_start >= token.start && match_end <= token.end {
-                            // Match lies entirely within this text segment.
-                            let before = &seg[..match_start - token.start];
-                            let highlighted = &seg[match_start - token.start..match_end - token.start];
-                            let after = &seg[match_end - token.start..];
-
-                            self.writer.write_all(before)?;
-                            self.writer.write_all(ansi::color_code(severity))?;
-                            self.writer.write_all(highlighted)?;
-                            self.writer.write_all(ansi::RESET)?;
-                            self.writer.write_all(after)?;
-                        } else {
-                            // No match in this text segment – write as is.
-                            self.writer.write_all(seg)?;
-                        }
-                    }
-                    TokenKind::Escape => {
-                        // Write escape sequence untouched.
-                        self.writer.write_all(&line[token.start..token.end])?;
-                    }
-                }
+            // Do not highlight lines that already contain ANSI escapes.
+            if !contains_ansi(line) {
+                let severity = db.severity(m.pattern_id);
+                self.writer.write_all(ansi::color_code(severity))?;
+                self.writer.write_all(line)?;
+                self.writer.write_all(ansi::RESET)?;
+            } else {
+                self.writer.write_all(line)?;
             }
         } else {
-            // No match – simply write the whole line.
             self.writer.write_all(line)?;
         }
 
+        // Append newline – triggers LineWriter flush.
         self.writer.write_all(b"\n")?;
         Ok(())
     }
@@ -82,4 +58,9 @@ impl<W: Write> Renderer<W> {
     pub fn flush(&mut self) -> io::Result<()> {
         self.writer.flush()
     }
+}
+
+/// Returns true if the byte slice contains any ANSI escape sequences.
+fn contains_ansi(data: &[u8]) -> bool {
+    memchr::memchr(b'\x1b', data).is_some()
 }

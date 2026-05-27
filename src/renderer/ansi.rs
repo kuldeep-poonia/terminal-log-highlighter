@@ -1,14 +1,14 @@
 use crate::matcher::classifier::Severity;
 
-/// Standard ANSI Reset sequence.
 pub const RESET: &[u8] = b"\x1b[0m";
 
-/// Return the ANSI colour escape sequence for a given severity.
+/// Returns the ANSI colour escape sequence for a given severity.
+/// All colours are **bright** (intense) variants for maximum visibility.
 pub fn color_code(severity: Severity) -> &'static [u8] {
     match severity {
-        Severity::Info    => b"\x1b[34m",   // blue
-        Severity::Warn    => b"\x1b[33m",   // yellow
-        Severity::Error   => b"\x1b[31m",   // red
-        Severity::Critical=> b"\x1b[1;31m", // bold red
+        Severity::Info     => b"\x1b[94m",   // bright blue
+        Severity::Warn     => b"\x1b[93m",   // bright yellow
+        Severity::Error    => b"\x1b[91m",   // bright red
+        Severity::Critical => b"\x1b[1;91m", // bold bright red
     }
 }
