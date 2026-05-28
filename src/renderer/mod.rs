@@ -1,5 +1,7 @@
 pub mod ansi;
 
+use std::vec::Vec;
+
 use crate::matcher::classifier::{MatchResult, PatternDatabase};
 use std::io::{self, LineWriter, Write};
 
@@ -37,7 +39,7 @@ impl<W: Write> Renderer<W> {
         if let Some(m) = match_result {
             let severity = db.severity(m.pattern_id);
 
-            // ── Audible alert via terminal bell ──────────────────────────
+            // ── Audible alert via terminal bell
             // Written before the colour prefix so the beep fires at the exact
             // moment the line arrives, not after the colour data is flushed.
             if ansi::should_beep(severity) {
@@ -47,7 +49,7 @@ impl<W: Write> Renderer<W> {
             // ── Strip ANSI so our background colour shows end-to-end ──────
             let clean = strip_ansi(line);
 
-            // ── Colour wrap ───────────────────────────────────────────────
+            // ── Colour wrap
             self.writer.write_all(ansi::color_code(severity))?;
             self.writer.write_all(&clean)?;
             self.writer.write_all(ansi::RESET)?;
@@ -75,9 +77,9 @@ impl<W: Write> Renderer<W> {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+//
 // ANSI stripping
-// ─────────────────────────────────────────────────────────────────────────────
+//
 
 /// Remove all ANSI / VT100 escape sequences from `data`, returning a fresh
 /// `Vec<u8>` that contains only the visible text bytes.
