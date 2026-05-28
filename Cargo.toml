@@ -2,11 +2,12 @@
 name = "sentinel"
 version = "0.1.0"
 edition = "2021"
+description = "A terminal log highlighter"
 
 [dependencies]
 memchr = "2"
 aho-corasick = "1"
-regex = { version = "1", features = ["bytes"] }
+regex = { version = "1", features = ["bytes"], optional = true}
 toml = "0.8"
 portable-pty = "0.8"
 
