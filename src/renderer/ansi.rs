@@ -12,7 +12,6 @@ pub const RESET: &[u8] = b"\x1b[0m";
 pub const BELL: &[u8] = b"\x07";
 
 /// ANSI colour prefix for each severity level.
-///
 /// Design goals
 /// ────────────
 /// 1. **Background colours** are used for Error/Critical so that the highlight

@@ -6,6 +6,8 @@ pub mod simple;
 
 use std::string::String;
 use std::vec::Vec;
+#[cfg(feature = "regex")]
+use ::regex::bytes::Regex as ByteRegex;
 // Private import for internal use
 use classifier::MatchResult;
 // Public re‑export so runtime/processor can use it directly
@@ -23,7 +25,7 @@ pub enum Matcher {
     },
     Aho(AhoMatcher),
     #[cfg(feature = "regex")]
-    Regex(regex::bytes::Regex, u32),
+    Regex(ByteRegex, u32),
 }
 
 impl Matcher {
