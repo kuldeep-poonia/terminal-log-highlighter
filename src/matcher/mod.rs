@@ -4,10 +4,10 @@ pub mod classifier;
 pub mod regex;
 pub mod simple;
 
-use std::string::String;
-use std::vec::Vec;
 #[cfg(feature = "regex")]
 use ::regex::bytes::Regex as ByteRegex;
+use std::string::String;
+use std::vec::Vec;
 // Private import for internal use
 use classifier::MatchResult;
 // Public re‑export so runtime/processor can use it directly
