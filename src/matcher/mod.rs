@@ -1,16 +1,16 @@
-pub mod simple;
 pub mod aho;
+pub mod classifier;
 #[cfg(feature = "regex")]
 pub mod regex;
-pub mod classifier;
+pub mod simple;
 
 // Private import for internal use
 use classifier::MatchResult;
 // Public re‑export so runtime/processor can use it directly
 pub use classifier::PatternDatabase;
 
-use simple::SimpleMatcher;
 use aho::AhoMatcher;
+use simple::SimpleMatcher;
 
 pub enum Matcher {
     Noop,
@@ -65,12 +65,10 @@ impl Matcher {
             }
             Matcher::Aho(a) => a.check(line),
             #[cfg(feature = "regex")]
-            Matcher::Regex(re, id) => {
-                re.find(line).map(|m| MatchResult {
-                    pattern_id: *id,
-                    offset: m.start(),
-                })
-            }
+            Matcher::Regex(re, id) => re.find(line).map(|m| MatchResult {
+                pattern_id: *id,
+                offset: m.start(),
+            }),
         }
     }
 }

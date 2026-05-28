@@ -106,7 +106,10 @@ impl Session {
     pub fn reader(&mut self) -> &mut dyn BufRead {
         match self {
             Session::Stdin(ref mut r) => r,
-            Session::Pty { child: _, ref mut reader } => reader,
+            Session::Pty {
+                child: _,
+                ref mut reader,
+            } => reader,
         }
     }
 }
@@ -136,9 +139,19 @@ fn real_terminal_size() -> PtySize {
         .unwrap_or(0);
 
     if cols > 0 && rows > 0 {
-        PtySize { rows, cols, pixel_width: 0, pixel_height: 0 }
+        PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        }
     } else {
         // Sensible default for most developer terminals.
-        PtySize { rows: 24, cols: 120, pixel_width: 0, pixel_height: 0 }
+        PtySize {
+            rows: 24,
+            cols: 120,
+            pixel_width: 0,
+            pixel_height: 0,
+        }
     }
 }

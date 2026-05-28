@@ -1,12 +1,12 @@
-pub mod stream;
-pub mod processor;
 pub mod chunk_reader;
-pub mod line_assembler;
 pub mod events;
+pub mod line_assembler;
+pub mod processor;
+pub mod stream;
 
 use crate::config::schema::Config;
-use crate::renderer::Renderer;
 use crate::matcher::PatternDatabase;
+use crate::renderer::Renderer;
 use std::io::{self, BufRead};
 
 /// Run the runtime pipeline over any buffered reader.

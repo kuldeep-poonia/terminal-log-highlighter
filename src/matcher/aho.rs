@@ -1,9 +1,9 @@
-use aho_corasick::AhoCorasick;
 use super::classifier::MatchResult;
+use aho_corasick::AhoCorasick;
 
 pub struct AhoMatcher {
     ac: AhoCorasick,
-    pattern_ids: Vec<u32>,   // map automaton pattern index → external pattern ID
+    pattern_ids: Vec<u32>, // map automaton pattern index → external pattern ID
 }
 
 impl AhoMatcher {

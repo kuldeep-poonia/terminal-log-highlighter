@@ -93,9 +93,9 @@ impl<W: Write> Processor<W> {
     }
 }
 
-// 
+//
 // Helpers
-// 
+//
 
 /// ASCII-only lowercase: A–Z → a–z, all other bytes unchanged.
 ///

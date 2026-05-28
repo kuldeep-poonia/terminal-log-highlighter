@@ -1,5 +1,5 @@
-use memchr::memchr;
 use super::events::LineEvent;
+use memchr::memchr;
 use std::io;
 
 /// Ring‑buffer line assembler.
@@ -11,11 +11,11 @@ use std::io;
 ///   A future improvement will use a **segmented ring buffer** to avoid
 ///   any large memcopies, entirely eliminating burst‑latency spikes.
 pub struct LineAssembler {
-    buf: Box<[u8]>,          // fixed‑size ring buffer
-    write_pos: usize,        // next write index
-    read_pos: usize,         // next read index
-    full: bool,              // buffer full when write_pos == read_pos && full
-    max_line_len: usize,     // max bytes without \n before forced overflow
+    buf: Box<[u8]>,      // fixed‑size ring buffer
+    write_pos: usize,    // next write index
+    read_pos: usize,     // next read index
+    full: bool,          // buffer full when write_pos == read_pos && full
+    max_line_len: usize, // max bytes without \n before forced overflow
     // Shrink‑throttling: only shrink after many bytes without growth.
     consecutive_reads_since_growth: usize,
 }
@@ -31,7 +31,7 @@ impl LineAssembler {
             write_pos: 0,
             read_pos: 0,
             full: false,
-            max_line_len: 65536,   // 64 KiB – protects against worst‑case scanning
+            max_line_len: 65536, // 64 KiB – protects against worst‑case scanning
             consecutive_reads_since_growth: 0,
         }
     }
@@ -121,11 +121,13 @@ impl LineAssembler {
                     let old_len = used;
                     if old_len > 0 {
                         if self.read_pos <= self.write_pos && !self.full {
-                            new_buf[..old_len].copy_from_slice(&self.buf[self.read_pos..self.write_pos]);
+                            new_buf[..old_len]
+                                .copy_from_slice(&self.buf[self.read_pos..self.write_pos]);
                         } else {
                             let first_part = self.buf.len() - self.read_pos;
                             new_buf[..first_part].copy_from_slice(&self.buf[self.read_pos..]);
-                            new_buf[first_part..old_len].copy_from_slice(&self.buf[..self.write_pos]);
+                            new_buf[first_part..old_len]
+                                .copy_from_slice(&self.buf[..self.write_pos]);
                         }
                     }
                     self.buf = new_buf;
@@ -175,36 +177,51 @@ impl LineAssembler {
 
     /// Feed a chunk of data, calling `cb` for each completed line.
     /// The callback returns `io::Result<()>` – errors are propagated immediately.
-    
-    #[inline]
-pub fn push<F>(&mut self, data: &[u8], mut cb: F) -> io::Result<()>
-where
-    F: FnMut(LineEvent<'_>) -> io::Result<()>,
-{
-    self.extend_from_slice(data);
 
-    while !self.is_empty() {
-        let (first_start, first_len) = self.linear_read_range();
-        if let Some(pos) = memchr(b'\n', &self.buf[first_start..first_start + first_len]) {
-            // Found newline in first segment.
-            let line_len = pos; // bytes before newline
-            let line = &self.buf[first_start..first_start + line_len];
-            let consume = line_len + 1;
-            self.read_pos = (self.read_pos + consume) % self.buf.len();
-            self.full = false;
-            cb(LineEvent::Line(line))?;
-        } else {
-            let (second_start, second_len) = if self.write_pos < self.read_pos || self.full {
-                (0, self.write_pos)
+    #[inline]
+    pub fn push<F>(&mut self, data: &[u8], mut cb: F) -> io::Result<()>
+    where
+        F: FnMut(LineEvent<'_>) -> io::Result<()>,
+    {
+        self.extend_from_slice(data);
+
+        while !self.is_empty() {
+            let (first_start, first_len) = self.linear_read_range();
+            if let Some(pos) = memchr(b'\n', &self.buf[first_start..first_start + first_len]) {
+                // Found newline in first segment.
+                let line_len = pos; // bytes before newline
+                let line = &self.buf[first_start..first_start + line_len];
+                let consume = line_len + 1;
+                self.read_pos = (self.read_pos + consume) % self.buf.len();
+                self.full = false;
+                cb(LineEvent::Line(line))?;
             } else {
-                (0, 0)
-            };
-            if second_len > 0 {
-                if let Some(_pos) = memchr(b'\n', &self.buf[second_start..second_start + second_len]) {
-                    // Line spans the end of the first segment + part of the second.
-                    // Make contiguous and retry.
-                    self.make_contiguous();
-                    continue;
+                let (second_start, second_len) = if self.write_pos < self.read_pos || self.full {
+                    (0, self.write_pos)
+                } else {
+                    (0, 0)
+                };
+                if second_len > 0 {
+                    if let Some(_pos) =
+                        memchr(b'\n', &self.buf[second_start..second_start + second_len])
+                    {
+                        // Line spans the end of the first segment + part of the second.
+                        // Make contiguous and retry.
+                        self.make_contiguous();
+                        continue;
+                    } else {
+                        let total_len = self.len();
+                        if total_len > self.max_line_len {
+                            self.make_contiguous();
+                            let total = self.len();
+                            let overflow = &self.buf[..total];
+                            cb(LineEvent::Overflow(overflow))?;
+                            self.read_pos = 0;
+                            self.write_pos = 0;
+                            self.full = false;
+                        }
+                        break;
+                    }
                 } else {
                     let total_len = self.len();
                     if total_len > self.max_line_len {
@@ -218,25 +235,12 @@ where
                     }
                     break;
                 }
-            } else {
-                let total_len = self.len();
-                if total_len > self.max_line_len {
-                    self.make_contiguous();
-                    let total = self.len();
-                    let overflow = &self.buf[..total];
-                    cb(LineEvent::Overflow(overflow))?;
-                    self.read_pos = 0;
-                    self.write_pos = 0;
-                    self.full = false;
-                }
-                break;
             }
         }
-    }
 
-    self.maybe_shrink();
-    Ok(())
-}
+        self.maybe_shrink();
+        Ok(())
+    }
 
     /// Flush any remaining unterminated data.
     pub fn flush<F>(&mut self, mut cb: F) -> io::Result<()>

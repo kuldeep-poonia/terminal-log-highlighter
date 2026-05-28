@@ -1,8 +1,8 @@
-mod runtime;
-mod matcher;
-mod renderer;
 mod config;
+mod matcher;
 mod parser;
+mod renderer;
+mod runtime;
 mod terminal;
 
 use std::env;
@@ -13,7 +13,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
-    // ── CLI flags 
+    // ── CLI flags
     if args.iter().any(|a| a == "--version" || a == "-V") {
         println!("sentinel {VERSION}");
         return;
@@ -24,7 +24,7 @@ fn main() {
         return;
     }
 
-    // ── Load config 
+    // ── Load config
     let config = config::load_config();
 
     // ── Run ──────
@@ -45,7 +45,7 @@ fn main() {
         let mut session = Session::stdin();
         runtime::run(session.reader(), config)
     } else {
-        let command  = &args[0];
+        let command = &args[0];
         let cmd_args = &args[1..];
         match Session::spawn(command, cmd_args) {
             Ok(mut session) => runtime::run(session.reader(), config),

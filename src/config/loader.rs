@@ -84,10 +84,10 @@ fn parse_config(toml_str: &str) -> Result<Config, String> {
             .unwrap_or("warn");
 
         let severity = match severity_str.to_ascii_lowercase().as_str() {
-            "info"                   => Severity::Info,
-            "warn" | "warning"       => Severity::Warn,
-            "error"                  => Severity::Error,
-            "critical" | "fatal"     => Severity::Critical,
+            "info" => Severity::Info,
+            "warn" | "warning" => Severity::Warn,
+            "error" => Severity::Error,
+            "critical" | "fatal" => Severity::Critical,
             other => return Err(format!("unknown severity '{other}'")),
         };
 
@@ -99,5 +99,7 @@ fn parse_config(toml_str: &str) -> Result<Config, String> {
         });
     }
 
-    Ok(Config { filters: filter_list })
+    Ok(Config {
+        filters: filter_list,
+    })
 }

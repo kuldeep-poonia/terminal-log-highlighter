@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use sentinel::runtime::line_assembler::LineAssembler;
 use sentinel::runtime::events::LineEvent;
+use sentinel::runtime::line_assembler::LineAssembler;
 use std::io;
 
 fn bench_allocations(c: &mut Criterion) {
@@ -12,9 +12,9 @@ fn bench_allocations(c: &mut Criterion) {
     group.bench_function("large_line_growth", |b| {
         b.iter(|| {
             let mut assembler = LineAssembler::new();
-            assembler.push(bytes, |_event: LineEvent<'_>| -> io::Result<()> {
-                Ok(())
-            }).unwrap();
+            assembler
+                .push(bytes, |_event: LineEvent<'_>| -> io::Result<()> { Ok(()) })
+                .unwrap();
         });
     });
     group.finish();

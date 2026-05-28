@@ -26,3 +26,5 @@ src/terminal/mod.rs:
 src/terminal/session.rs:
 src/terminal/pty.rs:
 src/terminal/stdout.rs:
+
+# env-dep:CARGO_PKG_VERSION=0.1.0

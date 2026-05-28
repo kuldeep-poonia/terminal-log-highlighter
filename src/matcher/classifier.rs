@@ -49,9 +49,6 @@ impl PatternDatabase {
         Self { entries }
     }
 
-    
-    
-
     /// Number of patterns stored.
     #[inline]
     pub fn len(&self) -> usize {

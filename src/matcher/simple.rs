@@ -2,7 +2,7 @@ use super::classifier::MatchResult;
 use memchr::memmem;
 
 pub struct SimpleMatcher {
-    pattern: Vec<u8>,    // byte pattern
+    pattern: Vec<u8>, // byte pattern
     pattern_id: u32,
 }
 
