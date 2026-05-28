@@ -1,0 +1,165 @@
+# 
+# Sentinel configuration  —  .sentinel.toml
+# 
+#
+# Sentinel searches for this file in the following order, using the first one
+# it finds:
+#
+#   1.  Path set in  $SENTINEL_CONFIG=/path/to/file.toml
+#   2.  ./.sentinel.toml         (current working directory – project rules)
+#   3.  ~/.sentinel.toml         (home directory – user-wide rules)
+#   4.  Built-in defaults        (covers the most common patterns out-of-the-box)
+#
+# 
+# Pattern matching
+# 
+#
+# Patterns are matched as case-insensitive substrings anywhere in the line.
+# "error" matches "Error", "ERROR", "BuildError", "Connection error:", etc.
+#
+# All existing ANSI colour codes in the line (e.g. Docker Compose service-name
+# colours) are stripped before matching so the pattern always sees plain text.
+#
+# 
+# Severity levels and their visual appearance
+# 
+#
+#   critical  →  bold bright YELLOW text on RED background  + terminal bell 🔔
+#   error     →  bold bright WHITE  text on RED background  + terminal bell 🔔
+#   warn      →  bold bright YELLOW text  (no background, no bell)
+#   info      →  bold bright CYAN   text  (no background, no bell)
+#
+# The terminal bell is produced by writing ASCII BEL (\x07) to stdout.
+# No audio files are used – your terminal emulator plays its own alert sound.
+#
+# 
+
+[filters]
+
+# ── Critical / Fatal 
+# These patterns indicate the process is about to die or has already crashed.
+
+[filters.panic]
+pattern  = "panic"
+severity = "critical"
+
+[filters.fatal]
+pattern  = "fatal"
+severity = "critical"
+
+[filters.oom]
+pattern  = "out of memory"
+severity = "critical"
+
+[filters.oom_short]
+pattern  = "oom"
+severity = "critical"
+
+[filters.segfault]
+pattern  = "segfault"
+severity = "critical"
+
+[filters.killed]
+pattern  = "killed"
+severity = "critical"
+
+[filters.timeout]
+pattern  = "timeout"
+severity = "critical"
+
+[filters.deadlock]
+pattern  = "deadlock"
+severity = "critical"
+
+# ── Errors ──
+
+[filters.error]
+pattern  = "error"
+severity = "error"
+
+[filters.exception]
+pattern  = "exception"
+severity = "error"
+
+[filters.traceback]
+pattern  = "traceback"
+severity = "error"
+
+[filters.failed]
+pattern  = "failed"
+severity = "error"
+
+[filters.failure]
+pattern  = "failure"
+severity = "error"
+
+[filters.crash]
+pattern  = "crash"
+severity = "error"
+
+[filters.denied]
+pattern  = "denied"
+severity = "error"
+
+[filters.refused]
+pattern  = "refused"
+severity = "error"
+
+[filters.not_found]
+pattern  = "not found"
+severity = "error"
+
+[filters.unhandled]
+pattern  = "unhandled"
+severity = "error"
+
+# ── Warnings 
+
+[filters.warn]
+pattern  = "warn"
+severity = "warn"
+
+[filters.deprecated]
+pattern  = "deprecated"
+severity = "warn"
+
+[filters.retrying]
+pattern  = "retrying"
+severity = "warn"
+
+[filters.slow]
+pattern  = "slow"
+severity = "warn"
+
+# ── Info / Success ──
+
+[filters.success]
+pattern  = "success"
+severity = "info"
+
+[filters.ready]
+pattern  = "ready"
+severity = "info"
+
+[filters.listening]
+pattern  = "listening"
+severity = "info"
+
+[filters.connected]
+pattern  = "connected"
+severity = "info"
+
+[filters.started]
+pattern  = "started"
+severity = "info"
+
+# ── Custom project rules ───────
+# Copy this block and fill in your own patterns.
+#
+# [filters.my_rule]
+# pattern  = "MYAPP_ALERT"
+# severity = "error"
+#
+# [filters.my_metric]
+# pattern  = "high latency"
+# severity = "warn"

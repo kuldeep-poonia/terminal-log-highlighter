@@ -1,13 +1,9 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
-
-env:
-  CARGO_TERM_COLOR: always
-  BINARY_NAME: sentinel
+      - "v*.*.*"
 
 jobs:
   build:
@@ -17,116 +13,63 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # ── Linux x86_64 (musl – fully static binary) ─────────────────────
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            asset_name: sentinel-Linux-x86_64
+            target: x86_64-unknown-linux-musl
+            artifact: sentinel-Linux-x86_64
+
+          # ── Linux arm64 (musl – fully static binary) ──────────────────────
           - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            asset_name: sentinel-Linux-arm64
-          - os: macos-latest
+            target: aarch64-unknown-linux-musl
+            artifact: sentinel-Linux-arm64
+            cross: true
+
+          # ── macOS Intel ───────────────────────────────────────────────────
+          - os: macos-13
             target: x86_64-apple-darwin
-            asset_name: sentinel-Darwin-x86_64
-          - os: macos-latest
+            artifact: sentinel-Darwin-x86_64
+
+          # ── macOS Apple Silicon ───────────────────────────────────────────
+          - os: macos-14
             target: aarch64-apple-darwin
-            asset_name: sentinel-Darwin-arm64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            asset_name: sentinel-Windows-x86_64.exe
+            artifact: sentinel-Darwin-arm64
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
 
-      - name: Cache cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      # Install cross-compilation toolchain for Linux arm64
+      - name: Install cross (arm64 only)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
-      # Cross-compilation toolchain for ARM64 Linux
-      - name: Install ARM64 cross-compilation tools (Linux)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+      # musl linker for x86_64 Linux static binary
+      - name: Install musl tools (Linux x86_64)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get install -y musl-tools
+
+      # Build
+      - name: Build (native)
+        if: "!matrix.cross"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (cross)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      # Rename binary to the artifact name expected by install.sh
+      - name: Rename binary
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          cp target/${{ matrix.target }}/release/sentinel ${{ matrix.artifact }}
 
-      - name: Configure Cargo for ARM64 linker
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          mkdir -p .cargo
-          cat >> .cargo/config.toml <<EOF
-          [target.aarch64-unknown-linux-gnu]
-          linker = "aarch64-linux-gnu-gcc"
-          ar = "aarch64-linux-gnu-ar"
-          EOF
-
-      - name: Build binary
-        run: |
-          cargo build --release --target ${{ matrix.target }}
-
-      - name: Prepare asset
-        shell: bash
-        run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            BIN="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe"
-          else
-            BIN="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
-          fi
-
-          echo "Checking binary at: $BIN"
-          ls -l "$BIN" || exit 1
-
-          cp "$BIN" "${{ matrix.asset_name }}"
-
-      # Upload binary as a workflow artifact so the checksums job can use it
-      - name: Upload binary as artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
         with:
-          name: ${{ matrix.asset_name }}
-          path: ${{ matrix.asset_name }}
-          retention-days: 1
-
-      # Upload directly to the GitHub Release
-      - name: Upload to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ matrix.asset_name }}
-          asset_name: ${{ matrix.asset_name }}
-          tag: ${{ github.ref }}
-          overwrite: true
-
-  checksums:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      # Download all workflow artifacts from the previous build jobs
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: assets
-
-      - name: Generate checksums
-        run: |
-          cd assets
-          # All artifacts are placed in subdirectories; we flatten them for checksums
-          find . -type f -exec sha256sum {} \; > ../sha256sums.txt
-
-      - name: Upload checksums to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: sha256sums.txt
-          asset_name: sha256sums.txt
-          tag: ${{ github.ref }}
-          overwrite: true
+          files: ${{ matrix.artifact }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
