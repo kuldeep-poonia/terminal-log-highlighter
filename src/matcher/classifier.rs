@@ -8,11 +8,17 @@ pub enum Severity {
 }
 
 /// A compact result of a match.
-/// Carries only a numeric pattern ID and the byte offset;
-/// the consumer can look up the severity and display string from a database.
+///
+/// `pattern_id` is used immediately to look up severity for highlighting.
+/// `offset` records where in the line the match occurred; it is retained for
+/// future use (e.g. per-word inline highlighting) rather than full-line
+/// background colour.
 #[derive(Debug, Clone, Copy)]
 pub struct MatchResult {
     pub pattern_id: u32,
+    /// Byte offset of the first matching byte within the line.
+    /// Not currently read by the renderer; kept for forward compatibility.
+    #[allow(dead_code)]
     pub offset: usize,
 }
 
@@ -47,6 +53,12 @@ impl PatternDatabase {
             })
             .collect();
         Self { entries }
+    }
+
+    /// Returns `true` if no patterns are loaded.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
     }
 
     /// Number of patterns stored.

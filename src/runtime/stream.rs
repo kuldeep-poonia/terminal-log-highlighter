@@ -12,11 +12,8 @@ pub fn process_stream<R: BufRead, W: Write>(
     mut reader: ChunkReader<R>,
     mut processor: Processor<W>,
 ) -> io::Result<()> {
-    loop {
-        match reader.read_chunk()? {
-            Some(chunk) => processor.process_chunk(chunk)?,
-            None => break,
-        }
-    }
+    while let Some(chunk) = reader.read_chunk()? {
+    processor.process_chunk(chunk)?;
+}
     processor.flush()
 }

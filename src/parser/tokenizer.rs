@@ -1,12 +1,17 @@
 use super::ansi_fsm;
 
-/// A token produced by the tokenizer.
+/// The kind of a token produced by `Tokenizer`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
+    /// Visible text bytes (no ANSI codes).
     Text,
+    /// A complete ANSI / VT100 escape sequence.
     Escape,
 }
 
+/// A byte-range token referencing the original slice.
+///
+/// `start` and `end` are byte indices into the slice passed to `Tokenizer::new`.
 #[derive(Debug, Clone, Copy)]
 pub struct Token {
     pub kind: TokenKind,
@@ -14,8 +19,11 @@ pub struct Token {
     pub end: usize, // exclusive
 }
 
-/// Splits a byte slice into alternating Text and Escape tokens.
-/// Always starts with a Text token (possibly empty) and ends with a Text token.
+/// Splits a byte slice into alternating `Text` and `Escape` tokens.
+///
+/// Used by `renderer::strip_ansi` to remove escape sequences before applying
+/// highlight colours, so that background colours are not broken by existing
+/// ANSI codes (e.g. Docker Compose service-name colours).
 pub struct Tokenizer<'a> {
     data: &'a [u8],
     pos: usize,
@@ -35,27 +43,22 @@ impl<'a> Iterator for Tokenizer<'a> {
             return None;
         }
 
-        // Find the next ESC byte
         let remaining = &self.data[self.pos..];
+
         if let Some(esc_rel) = memchr::memchr(0x1B, remaining) {
             let esc_abs = self.pos + esc_rel;
 
-            // Text token from current pos to ESC (exclusive)
+            // Emit a Text token for bytes before the ESC.
             if esc_abs > self.pos {
-                let token = Token {
-                    kind: TokenKind::Text,
-                    start: self.pos,
-                    end: esc_abs,
-                };
+                let token = Token { kind: TokenKind::Text, start: self.pos, end: esc_abs };
                 self.pos = esc_abs;
                 return Some(token);
             }
 
-            // Current position is exactly at ESC; parse escape sequence
-            let esc_slice = &self.data[self.pos..];
-            let len = ansi_fsm::parse_escape_sequence(esc_slice);
+            // We are exactly at an ESC; parse the escape sequence.
+            let len = ansi_fsm::parse_escape_sequence(&self.data[self.pos..]);
             if len == 0 {
-                // Incomplete sequence at end; consume remaining as Text
+                // Incomplete sequence at end of data – emit as Text.
                 let token = Token {
                     kind: TokenKind::Text,
                     start: self.pos,
@@ -63,24 +66,24 @@ impl<'a> Iterator for Tokenizer<'a> {
                 };
                 self.pos = self.data.len();
                 return Some(token);
-            } else {
-                let token = Token {
-                    kind: TokenKind::Escape,
-                    start: self.pos,
-                    end: self.pos + len,
-                };
-                self.pos += len;
-                return Some(token);
             }
+
+            let token = Token {
+                kind: TokenKind::Escape,
+                start: self.pos,
+                end: self.pos + len,
+            };
+            self.pos += len;
+            Some(token)
         } else {
-            // No more ESC; remaining all text
+            // No more ESC bytes – emit remaining bytes as Text.
             let token = Token {
                 kind: TokenKind::Text,
                 start: self.pos,
                 end: self.data.len(),
             };
             self.pos = self.data.len();
-            return Some(token);
+            Some(token)
         }
     }
 }

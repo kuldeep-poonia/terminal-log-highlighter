@@ -20,6 +20,12 @@ pub struct LineAssembler {
     consecutive_reads_since_growth: usize,
 }
 
+impl Default for LineAssembler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LineAssembler {
     // Start with 16 KiB to avoid the first few growths for typical streams.
     const INITIAL_CAP: usize = 16384;
@@ -177,7 +183,6 @@ impl LineAssembler {
 
     /// Feed a chunk of data, calling `cb` for each completed line.
     /// The callback returns `io::Result<()>` – errors are propagated immediately.
-
     #[inline]
     pub fn push<F>(&mut self, data: &[u8], mut cb: F) -> io::Result<()>
     where
