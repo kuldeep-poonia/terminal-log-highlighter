@@ -1,6 +1,6 @@
 pub mod ansi;
-pub mod highlight;
 pub mod flush;
+pub mod highlight;
 pub mod passthrough;
 
 use crate::matcher::classifier::{MatchResult, PatternDatabase};

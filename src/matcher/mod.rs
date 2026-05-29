@@ -1,14 +1,14 @@
-pub mod simple;
 pub mod aho;
+pub mod classifier;
 #[cfg(feature = "regex")]
 pub mod regex;
-pub mod classifier;
+pub mod simple;
 
 use classifier::MatchResult;
 pub use classifier::PatternDatabase;
 
-use simple::SimpleMatcher;
 use aho::AhoMatcher;
+use simple::SimpleMatcher;
 
 #[cfg(feature = "regex")]
 use self::regex::ByteRegex;
@@ -86,12 +86,10 @@ impl Matcher {
             }
             Matcher::Aho(a) => a.check(line),
             #[cfg(feature = "regex")]
-            Matcher::Regex(re, id) => {
-                re.find(line).map(|m| MatchResult {
-                    pattern_id: *id,
-                    offset: m.start(),
-                })
-            }
+            Matcher::Regex(re, id) => re.find(line).map(|m| MatchResult {
+                pattern_id: *id,
+                offset: m.start(),
+            }),
         }
     }
 }

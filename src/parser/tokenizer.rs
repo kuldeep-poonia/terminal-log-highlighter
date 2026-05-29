@@ -50,7 +50,11 @@ impl<'a> Iterator for Tokenizer<'a> {
 
             // Emit a Text token for bytes before the ESC.
             if esc_abs > self.pos {
-                let token = Token { kind: TokenKind::Text, start: self.pos, end: esc_abs };
+                let token = Token {
+                    kind: TokenKind::Text,
+                    start: self.pos,
+                    end: esc_abs,
+                };
                 self.pos = esc_abs;
                 return Some(token);
             }

@@ -13,7 +13,7 @@ pub fn process_stream<R: BufRead, W: Write>(
     mut processor: Processor<W>,
 ) -> io::Result<()> {
     while let Some(chunk) = reader.read_chunk()? {
-    processor.process_chunk(chunk)?;
-}
+        processor.process_chunk(chunk)?;
+    }
     processor.flush()
 }

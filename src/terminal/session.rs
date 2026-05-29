@@ -39,27 +39,18 @@ impl Session {
         let pty_system = NativePtySystem::default();
         let size = real_terminal_size();
 
-        let pair = pty_system
-            .openpty(size)
-            .map_err(io::Error::other)?;
+        let pair = pty_system.openpty(size).map_err(io::Error::other)?;
 
         let mut cmd = CommandBuilder::new(command);
         cmd.args(args);
 
-        let child = pair
-            .slave
-            .spawn_command(cmd)
-            .map_err(io::Error::other)?;
+        let child = pair.slave.spawn_command(cmd).map_err(io::Error::other)?;
 
-        let output_reader: Box<dyn Read + Send> = pair
-            .master
-            .try_clone_reader()
-            .map_err(io::Error::other)?;
+        let output_reader: Box<dyn Read + Send> =
+            pair.master.try_clone_reader().map_err(io::Error::other)?;
 
-        let mut stdin_writer: Box<dyn Write + Send> = pair
-            .master
-            .take_writer()
-            .map_err(io::Error::other)?;
+        let mut stdin_writer: Box<dyn Write + Send> =
+            pair.master.take_writer().map_err(io::Error::other)?;
 
         // ── Stdin forwarding thread ───────────────────────────────────────
         // Copies real terminal stdin → PTY master so Ctrl+C / Ctrl+D / any
@@ -94,7 +85,10 @@ impl Session {
     pub fn reader(&mut self) -> &mut dyn BufRead {
         match self {
             Session::Stdin(ref mut r) => r,
-            Session::Pty { child: _, ref mut reader } => reader,
+            Session::Pty {
+                child: _,
+                ref mut reader,
+            } => reader,
         }
     }
 }
@@ -114,8 +108,18 @@ fn real_terminal_size() -> PtySize {
         .unwrap_or(0);
 
     if cols > 0 && rows > 0 {
-        PtySize { rows, cols, pixel_width: 0, pixel_height: 0 }
+        PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        }
     } else {
-        PtySize { rows: 24, cols: 120, pixel_width: 0, pixel_height: 0 }
+        PtySize {
+            rows: 24,
+            cols: 120,
+            pixel_width: 0,
+            pixel_height: 0,
+        }
     }
 }
