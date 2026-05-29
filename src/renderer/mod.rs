@@ -1,99 +1,94 @@
-pub mod simple;
-pub mod aho;
-#[cfg(feature = "regex")]
-pub mod regex;
-pub mod classifier;
+pub mod ansi;
+pub mod highlight;
+pub mod flush;
+pub mod passthrough;
 
-use classifier::MatchResult;
-pub use classifier::PatternDatabase;
+use crate::matcher::classifier::{MatchResult, PatternDatabase};
+use crate::parser::tokenizer::{TokenKind, Tokenizer};
+use std::io::{self, LineWriter, Write};
 
-use simple::SimpleMatcher;
-use aho::AhoMatcher;
-
-pub enum Matcher {
-    Noop,
-    Simple(SimpleMatcher),
-    SingleByte {
-        byte: u8,
-        pattern_id: u32,
-    },
-    Aho(AhoMatcher),
-    /// One-pattern regex matcher, enabled with `--features regex`.
-    ///
-    /// When the regex feature is active and the config has exactly one pattern,
-    /// we compile it as a real regular expression so users can write patterns
-    /// like `"error.*connection"` in `.sentinel.toml`.
-    #[cfg(feature = "regex")]
-    Regex(regex::bytes::Regex, u32),
+pub struct Renderer<W: Write> {
+    writer: LineWriter<W>,
 }
 
-impl Matcher {
-    pub fn from_db(db: &PatternDatabase) -> Self {
-        // Use is_empty() for an early return before allocating the defs vec.
-        if db.is_empty() {
-            return Matcher::Noop;
-        }
-
-        let defs: Vec<(u32, &str)> = (0..db.len() as u32)
-            .map(|id| (id, db.pattern(id)))
-            .collect();
-
-        if defs.len() == 1 {
-            let (id, pattern) = defs[0];
-            if pattern.is_empty() {
-                return Matcher::Noop;
-            }
-
-            // When the regex feature is active, compile single patterns as real
-            // regular expressions.  Falls through to Simple on compile error so
-            // a bad regex pattern never silently disables matching.
-            #[cfg(feature = "regex")]
-            {
-                match regex::bytes::Regex::new(pattern) {
-                    Ok(re) => return Matcher::Regex(re, id),
-                    Err(e) => {
-                        eprintln!(
-                            "sentinel: warning: pattern '{}' is not valid regex ({}); \
-                             falling back to literal match",
-                            pattern, e
-                        );
-                    }
-                }
-            }
-
-            let bytes = pattern.as_bytes();
-            if bytes.len() == 1 {
-                return Matcher::SingleByte {
-                    byte: bytes[0],
-                    pattern_id: id,
-                };
-            }
-            return Matcher::Simple(SimpleMatcher::new(pattern, id));
-        }
-
-        let patterns: Vec<String> = defs.iter().map(|(_, p)| p.to_string()).collect();
-        let ids: Vec<u32> = defs.iter().map(|(id, _)| *id).collect();
-        Matcher::Aho(AhoMatcher::new(&patterns, &ids))
-    }
-
-    pub fn check<'a>(&'a self, line: &'a [u8]) -> Option<MatchResult> {
-        match self {
-            Matcher::Noop => None,
-            Matcher::Simple(s) => s.check(line),
-            Matcher::SingleByte { byte, pattern_id } => {
-                memchr::memchr(*byte, line).map(|offset| MatchResult {
-                    pattern_id: *pattern_id,
-                    offset,
-                })
-            }
-            Matcher::Aho(a) => a.check(line),
-            #[cfg(feature = "regex")]
-            Matcher::Regex(re, id) => {
-                re.find(line).map(|m| MatchResult {
-                    pattern_id: *id,
-                    offset: m.start(),
-                })
-            }
+impl<W: Write> Renderer<W> {
+    pub fn new(writer: W) -> Self {
+        Self {
+            writer: LineWriter::with_capacity(8192, writer),
         }
     }
+
+    /// Write a complete logical line.
+    ///
+    /// **Matched line** pipeline:
+    ///  1. Emit BEL (`\x07`) for Error / Critical – terminal plays its alert.
+    ///     No audio files, no syscalls beyond the write itself.
+    ///  2. Strip existing ANSI codes via `strip_ansi()` so our background
+    ///     colour is not interrupted by Docker / cargo colour sequences.
+    ///  3. Wrap cleaned text in severity colour prefix + RESET.
+    ///  4. Append `\n` → triggers `LineWriter` flush → immediate display.
+    ///
+    /// **Unmatched line** pipeline: raw bytes pass through unchanged.
+    pub fn write_line(
+        &mut self,
+        line: &[u8],
+        match_result: Option<MatchResult>,
+        db: &PatternDatabase,
+    ) -> io::Result<()> {
+        if let Some(m) = match_result {
+            let severity = db.severity(m.pattern_id);
+
+            // Audible alert: one byte, zero extra dependencies.
+            if ansi::should_beep(severity) {
+                self.writer.write_all(ansi::BELL)?;
+            }
+
+            let clean = strip_ansi(line);
+
+            self.writer.write_all(ansi::color_code(severity))?;
+            self.writer.write_all(&clean)?;
+            self.writer.write_all(ansi::RESET)?;
+        } else {
+            // Passthrough: preserve every byte including existing ANSI codes.
+            self.writer.write_all(line)?;
+        }
+
+        // Newline triggers LineWriter's line-buffered flush.
+        self.writer.write_all(b"\n")?;
+        Ok(())
+    }
+
+    /// Write raw bytes directly (used for partial / overflow data).
+    #[inline]
+    pub fn write_raw(&mut self, data: &[u8]) -> io::Result<()> {
+        self.writer.write_all(data)
+    }
+
+    /// Flush the underlying writer.
+    #[inline]
+    pub fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANSI stripping via the parser tokenizer
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Remove all ANSI / VT100 escape sequences from `data`.
+///
+/// Uses `parser::tokenizer::Tokenizer` which drives `parser::ansi_fsm` for
+/// correct sequence boundary detection.  Only `TokenKind::Text` segments are
+/// kept; `TokenKind::Escape` segments are dropped.
+///
+/// Called **only on matched lines**, so the common passthrough path pays zero
+/// cost.
+pub fn strip_ansi(data: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(data.len());
+    for token in Tokenizer::new(data) {
+        if token.kind == TokenKind::Text {
+            out.extend_from_slice(&data[token.start..token.end]);
+        }
+    }
+    out
 }
